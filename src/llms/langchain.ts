@@ -6,9 +6,9 @@ import env from "@/config/env";
 const chat = new ChatOpenAI({
   modelName: env.OPENAI_MODEL,
   temperature: 0,
-  openAIApiKey: env.OPENAI_API_KEY,
   configuration: {
     baseURL: env.OPENAI_BASE_URL,
+    apiKey: env.OPENAI_API_KEY,
   },
 }).withStructuredOutput(
   TorreSearchParamsSchema as unknown as Record<string, string>

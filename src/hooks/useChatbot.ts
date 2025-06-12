@@ -51,7 +51,7 @@ export default function useChatbot() {
       try {
         const {
           data: { size, ...payload },
-        } = await apiCall.post<TorreSearchParams>("/llm", {
+        } = await apiCall.post<TorreSearchParams>("/api/llm", {
           prompt: input,
         });
         if (payload.skill) {
