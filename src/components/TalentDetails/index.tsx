@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 
 import {
@@ -11,19 +13,38 @@ import {
   Globe,
   Calendar,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { IUser } from "@/interfaces";
-import { fetchGenome } from "@/services/genome";
 import { formatDateRange, getProficiencyColor } from "@/utils/helpers";
+import useTalentDetails from "@/hooks/useTalentDetails";
 
 interface TalentDetailsProps {
   user: IUser;
 }
 
-export default async function TalentDetails({ user }: TalentDetailsProps) {
-  const genome = await fetchGenome(user.username);
+export default function TalentDetails({ user }: TalentDetailsProps) {
+  const { genome, loading, error } = useTalentDetails(user);
 
-  if (!genome) {
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full text-center p-8">
+        <div>
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Loading Profile...
+          </h3>
+          <p className="text-gray-600">Fetching detailed profile information</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state or no genome data
+  if (error || !genome) {
     return (
       <div className="flex items-center justify-center h-full text-center p-8">
         <div>
@@ -34,7 +55,7 @@ export default async function TalentDetails({ user }: TalentDetailsProps) {
             Profile Unavailable
           </h3>
           <p className="text-gray-600 mb-4">
-            Unable to load detailed profile information.
+            {error || "Unable to load detailed profile information."}
           </p>
           <a
             href={`https://torre.ai/${user.username}`}
@@ -381,3 +402,21 @@ export default async function TalentDetails({ user }: TalentDetailsProps) {
     </div>
   );
 }
+
+/*
+ * CONVERTED TO CLIENT COMPONENT:
+ *
+ * Changes made:
+ * 1. Added "use client" directive at the top
+ * 2. Replaced async server component with client component using useTalentDetails hook
+ * 3. Added proper loading state with spinner animation
+ * 4. Enhanced error handling with user-friendly messages
+ * 5. Maintained all existing functionality and UI
+ * 6. Added Loader2 icon for better loading UX
+ *
+ * Benefits:
+ * - Better user experience with loading states
+ * - Client-side data fetching for more responsive UI
+ * - Proper error handling and user feedback
+ * - Separation of concerns with custom hook
+ */

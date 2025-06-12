@@ -1,16 +1,18 @@
-import { IChatbotMessage, IChatbotUser } from "@/interfaces/chatbot";
+import { useUserContext } from "@/context/userContext";
+import { IChatbotMessage } from "@/interfaces/chatbot";
+import { extractSearchParamsFromPrompt } from "@/llms/langchain";
+import { mapToIUser } from "@/utils/helpers";
+import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ISearchResponse } from "@/interfaces/people";
 
-export default function useChatbot(
-  users: IChatbotUser[],
-  onUserHighlight: (usernames: string[]) => void
-) {
+export default function useChatbot() {
   const [messages, setMessages] = useState<IChatbotMessage[]>([
     {
       id: "1",
       role: "assistant",
       content:
-        "Hi! I'm your AI talent assistant. I can help you search for specific talents using natural language. Try asking me something like 'Find me 10 developers with React experience' or 'Show me designers from New York'. I can also highlight specific users from your current search results!",
+        "Hi! I'm your AI talent assistant. I can help you search for specific talents using natural language. Try asking me something like 'Find me developers with React experience' or 'Show me designers from New York'. I can also highlight specific users from your current search results!",
       timestamp: new Date(),
     },
   ]);
@@ -25,6 +27,8 @@ export default function useChatbot(
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  const { setUsers } = useUserContext();
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -43,40 +47,32 @@ export default function useChatbot(
       setLoading(true);
 
       try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: input,
-            availableUsers: users.map((u) => ({
-              username: u.username,
-              name: u.name,
-            })),
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const assistantMessage: IChatbotMessage = {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: data.message,
-            timestamp: new Date(),
-            highlightedUsers: data.highlightedUsers || [],
+        const { size, ...payload } = await extractSearchParamsFromPrompt(input);
+        if (payload.skill) {
+          payload["skill/role"] = {
+            text: payload.skill.term,
+            proficiency: payload.skill.proficiency,
           };
-          setMessages((prev) => [...prev, assistantMessage]);
-
-          // Highlight users if any were mentioned
-          if (
-            data.highlightedUsers &&
-            data.highlightedUsers.length > 0 &&
-            onUserHighlight
-          ) {
-            onUserHighlight(data.highlightedUsers);
-          }
+          delete payload.skill;
         }
+        const { data } = await axios.post<ISearchResponse>(
+          "https://search.torre.co/people/_search",
+          payload,
+          {
+            params: { size },
+          }
+        );
+
+        setUsers(mapToIUser(data));
+
+        const assistantMessage: IChatbotMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content:
+            "Cool, that is done. Would you like me to help you with anything else?",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
       } catch (error) {
         console.error("Chat failed:", error);
         const errorMessage: IChatbotMessage = {
@@ -90,7 +86,7 @@ export default function useChatbot(
         setLoading(false);
       }
     },
-    [input, loading, users, onUserHighlight]
+    [input, loading, setUsers]
   );
 
   return {

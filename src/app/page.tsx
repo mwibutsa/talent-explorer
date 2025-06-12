@@ -1,32 +1,25 @@
-import { Suspense } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import TalentExplorer from "@/components/TalentExplorer";
 import { IUser } from "@/interfaces";
+import apiCall from "@/utils/apiCall";
 
-// Server component that fetches initial data
 async function getInitialTalents(): Promise<{
   users: IUser[];
   initialUser: IUser | null;
 }> {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/api/users`,
+    const { data: text } = await apiCall.post(
+      "/api/users",
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: "mwibutsa",
-        }),
+        query: "mwibutsa",
+      },
+      {
+        responseType: "text",
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    // Handle streaming NDJSON response
-    const text = await response.text();
     const lines = text.trim().split("\n");
     const users: IUser[] = [];
 
@@ -38,13 +31,11 @@ async function getInitialTalents(): Promise<{
             users.push(parsed);
           }
         } catch (error) {
-          // Skip invalid JSON lines
           console.warn("Skipping invalid JSON line:", line, error);
         }
       }
     }
 
-    // Find initial user (mwibutsa) or use first user
     const initialUser =
       users.find(
         (user: IUser) =>
@@ -61,7 +52,6 @@ async function getInitialTalents(): Promise<{
   }
 }
 
-// Loading component for suspense
 function TalentExplorerLoading() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -92,20 +82,32 @@ function TalentExplorerLoading() {
   );
 }
 
-// Server component wrapper
-async function TalentExplorerServer() {
-  const { users, initialUser } = await getInitialTalents();
+export default function TalentExplorerPage() {
+  const [users, setUsers] = useState<IUser[]>([]);
+  const [initialUser, setInitialUser] = useState<IUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { users, initialUser } = await getInitialTalents();
+        setUsers(users);
+        setInitialUser(initialUser);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <TalentExplorerLoading />;
+  }
 
   return (
     <TalentExplorer initialUsers={users} initialSelectedUser={initialUser} />
-  );
-}
-
-// Main page component (Server Component)
-export default function TalentExplorerPage() {
-  return (
-    <Suspense fallback={<TalentExplorerLoading />}>
-      <TalentExplorerServer />
-    </Suspense>
   );
 }

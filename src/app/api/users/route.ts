@@ -2,22 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { torreApiCall } from "@/utils/apiCall";
 
 export async function POST(request: NextRequest) {
-  const { query } = await request.json();
-
-  const response = await torreApiCall.post(
+  const { query, limit } = await request.json();
+  const { data } = await torreApiCall.post(
     `/entities/_searchStream`,
     {
       query,
+      limit,
     },
     {
       responseType: "stream",
     }
   );
 
-  // Create a readable stream from the response data
-  const stream = response.data;
+  const stream = data;
 
-  // Return a streaming response
   return new NextResponse(stream, {
     headers: {
       "Content-Type": "application/x-ndjson",

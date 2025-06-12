@@ -1,6 +1,7 @@
+import { useUserContext } from "@/context/userContext";
 import { IUser } from "@/interfaces";
 import { fetchUsers } from "@/services/users";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 
 export default function useTalentExplorer(
   initialUsers: IUser[],
@@ -8,65 +9,59 @@ export default function useTalentExplorer(
   initialShowChat: boolean
 ) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<IUser[]>(initialUsers);
+  const { users, setUsers } = useUserContext();
+
   const [loading, setLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<IUser | null>(
     initialSelectedUser
   );
   const [showChat, setShowChat] = useState(initialShowChat);
-  const [hasSearched, setHasSearched] = useState(true); // Set to true since we have initial data
+  const [hasSearched, setHasSearched] = useState(true);
   const [highlightedUsers, setHighlightedUsers] = useState<string[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const searchUsers = useCallback(async (query: string) => {
-    if (!query.trim()) return;
+  const usersRef = useRef<IUser[]>(initialUsers);
+  usersRef.current = users;
 
-    setLoading(true);
-    setHasSearched(true);
-    setUsers([]);
+  const searchUsers = useCallback(
+    async (query: string) => {
+      if (!query.trim()) return;
 
-    try {
-      const data = await fetchUsers(query);
+      setLoading(true);
+      setHasSearched(true);
+      setUsers([]);
 
-      if (!data) {
-        throw new Error("Failed to fetch data");
-      }
+      try {
+        const data = await fetchUsers(query);
 
-      // Handle streaming NDJSON response
-      const reader = data.getReader();
-      const decoder = new TextDecoder();
-      const newUsers: IUser[] = [];
+        if (!data) {
+          throw new Error("Failed to fetch data");
+        }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.trim().split("\n");
-
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const parsed = JSON.parse(line);
-              if (parsed.ardaId) {
-                newUsers.push(parsed);
-                setUsers([...newUsers]); // Update state with each new user
-                if (newUsers.length === 1) {
-                  setSelectedUser(parsed); // Select first user as they come in
-                }
+        for (const user of data) {
+          try {
+            if (user.ardaId) {
+              setUsers((prevUsers) => [...prevUsers, user]);
+              if (data.length === 1) {
+                setSelectedUser(user);
               }
-            } catch (error) {
-              console.warn("Skipping invalid JSON line:", line, error);
             }
+          } catch (error) {
+            console.warn("Skipping invalid JSON line:", user, error);
           }
         }
+      } catch (error) {
+        console.error("Search failed:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Search failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [setUsers]
+  );
+
+  useEffect(() => {
+    setUsers(initialUsers);
+  }, [initialUsers, setUsers]);
 
   const handleSearch = useCallback(
     (e: React.FormEvent) => {
@@ -80,19 +75,15 @@ export default function useTalentExplorer(
     setSelectedUser(user);
   }, []);
 
-  const handleChatUserHighlight = useCallback(
-    (usernames: string[]) => {
-      setHighlightedUsers(usernames);
-      // Auto-select the first highlighted user if available
-      const firstHighlighted = users.find((user) =>
-        usernames.includes(user.username)
-      );
-      if (firstHighlighted) {
-        setSelectedUser(firstHighlighted);
-      }
-    },
-    [users]
-  );
+  const handleChatUserHighlight = useCallback((usernames: string[]) => {
+    setHighlightedUsers(usernames);
+    const firstHighlighted = usersRef.current.find((user) =>
+      usernames.includes(user.username)
+    );
+    if (firstHighlighted) {
+      setSelectedUser(firstHighlighted);
+    }
+  }, []);
 
   return {
     handleChatUserHighlight,

@@ -12,13 +12,9 @@ interface ChatBotProps {
   users: IChatbotUser[];
 }
 
-export default function ChatBot({
-  onClose,
-  onUserHighlight,
-  users,
-}: ChatBotProps) {
+export default function ChatBot({ onClose, users }: ChatBotProps) {
   const { messages, input, loading, messagesEndRef, handleSubmit, setInput } =
-    useChatbot(users, onUserHighlight || (() => {}));
+    useChatbot();
   return (
     <div className="fixed bottom-4 right-4 w-96 h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50">
       {/* Header */}
