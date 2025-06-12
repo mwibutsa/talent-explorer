@@ -83,9 +83,6 @@ export const TorreSearchParamsSchema = z.object({
         .enum([
           "full-time-employment",
           "part-time-employment",
-          "freelance",
-          "internship",
-          "volunteer",
         ])
         .optional(),
     })
