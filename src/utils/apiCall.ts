@@ -1,11 +1,11 @@
 import axios from "axios";
 
 export const torreApiCall = axios.create({
-  baseURL: "https://torre.ai/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
 });
 
 const apiCall = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000",
+  baseURL: "",
 });
 
 export default apiCall;

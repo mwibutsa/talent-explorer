@@ -1,10 +1,12 @@
 import { useUserContext } from "@/context/userContext";
 import { IChatbotMessage } from "@/interfaces/chatbot";
-import { extractSearchParamsFromPrompt } from "@/llms/langchain";
+import { TorreSearchParams } from "@/llms/schema";
 import { mapToIUser } from "@/utils/helpers";
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ISearchResponse } from "@/interfaces/people";
+import env from "@/config/env";
+import apiCall from "@/utils/apiCall";
 
 export default function useChatbot() {
   const [messages, setMessages] = useState<IChatbotMessage[]>([
@@ -47,7 +49,11 @@ export default function useChatbot() {
       setLoading(true);
 
       try {
-        const { size, ...payload } = await extractSearchParamsFromPrompt(input);
+        const {
+          data: { size, ...payload },
+        } = await apiCall.post<TorreSearchParams>("/llm", {
+          prompt: input,
+        });
         if (payload.skill) {
           payload["skill/role"] = {
             text: payload.skill.term,
@@ -56,7 +62,7 @@ export default function useChatbot() {
           delete payload.skill;
         }
         const { data } = await axios.post<ISearchResponse>(
-          "https://search.torre.co/people/_search",
+          env.NEXT_PUBLIC_SEARCH_URL as string,
           payload,
           {
             params: { size },

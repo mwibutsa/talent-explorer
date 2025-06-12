@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { torreApiCall } from "@/utils/apiCall";
 
-export async function POST(request: NextRequest) {
+export const POST = async (request: NextRequest) => {
   const { query, limit } = await request.json();
   const { data } = await torreApiCall.post(
     `/entities/_searchStream`,
@@ -22,4 +22,4 @@ export async function POST(request: NextRequest) {
       "Transfer-Encoding": "chunked",
     },
   });
-}
+};

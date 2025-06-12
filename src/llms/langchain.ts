@@ -1,16 +1,18 @@
 // utils/extractParams.ts
 import { ChatOpenAI } from "@langchain/openai";
 import { TorreSearchParamsSchema, TorreSearchParams } from "./schema";
+import env from "@/config/env";
 
 const chat = new ChatOpenAI({
-  modelName: "gpt-3.5-turbo",
+  modelName: env.OPENAI_MODEL,
   temperature: 0,
-  openAIApiKey:
-    "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",
+  openAIApiKey: env.OPENAI_API_KEY,
   configuration: {
-    baseURL: "https://openrouter.ai/api/v1",
+    baseURL: env.OPENAI_BASE_URL,
   },
-}).withStructuredOutput(TorreSearchParamsSchema);
+}).withStructuredOutput(
+  TorreSearchParamsSchema as unknown as Record<string, string>
+);
 
 export async function extractSearchParamsFromPrompt(
   prompt: string
